@@ -1,9 +1,10 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 #pragma once
 
 #include <tuple>
@@ -325,7 +326,8 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
     return plain().instrumentation().getRecordedGCStats();
   }
 
-  Value getHeapInfo(bool includeExpensive) override {
+  std::unordered_map<std::string, int64_t> getHeapInfo(
+      bool includeExpensive) override {
     return plain().instrumentation().getHeapInfo(includeExpensive);
   }
 
@@ -333,15 +335,26 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
     plain().instrumentation().collectGarbage();
   }
 
-  bool createSnapshotToFile(const std::string& path, bool compact) override {
-    return const_cast<Plain&>(plain()).instrumentation().createSnapshotToFile(
-        path, compact);
+  void startTrackingHeapObjectStackTraces() override {
+    plain().instrumentation().startTrackingHeapObjectStackTraces();
   }
 
-  void writeBridgeTrafficTraceToFile(
-      const std::string& fileName) const override {
-    const_cast<Plain&>(plain()).instrumentation().writeBridgeTrafficTraceToFile(
-        fileName);
+  void stopTrackingHeapObjectStackTraces() override {
+    plain().instrumentation().stopTrackingHeapObjectStackTraces();
+  }
+
+  void createSnapshotToFile(const std::string& path) override {
+    plain().instrumentation().createSnapshotToFile(path);
+  }
+
+  void createSnapshotToStream(std::ostream& os) override {
+    plain().instrumentation().createSnapshotToStream(os);
+  }
+
+  std::string flushAndDisableBridgeTrafficTrace() override {
+    return const_cast<Plain&>(plain())
+        .instrumentation()
+        .flushAndDisableBridgeTrafficTrace();
   }
 
   void writeBasicBlockProfileTraceToFile(
@@ -400,10 +413,7 @@ struct AfterCaller<T, decltype((void)&T::after)> {
 // RAII constructed before each call to the undecorated class; the
 // ctor is passed a single argument of type WithArg&.  Plain and Base
 // are used as in the base class.
-template <
-    typename With,
-    typename Plain = Runtime,
-    typename Base = Runtime>
+template <typename With, typename Plain = Runtime, typename Base = Runtime>
 class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
  public:
   using RD = RuntimeDecorator<Plain, Base>;
